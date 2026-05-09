@@ -45,7 +45,9 @@ app.get('/api/colleges', async (req, res) => {
     // GET SEARCH + LOCATION
     const search = req.query.search || "";
 
-    const location = req.query.location || "";
+    
+
+
 
 
 
@@ -61,13 +63,13 @@ app.get('/api/colleges', async (req, res) => {
       FROM colleges
       WHERE
         name ILIKE $1
-        AND location ILIKE $2
+        
       ORDER BY rating DESC
       LIMIT $3 OFFSET $4
       `,
       [
         `%${search}%`,
-        `%${location}%`,
+        
         limit,
         offset
       ]

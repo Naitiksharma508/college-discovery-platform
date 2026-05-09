@@ -7,7 +7,7 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState("");
-  const [location, setLocation] = useState("");
+  
   const [selectedIds, setSelectedIds] = useState([]);
   const navigate = useNavigate(); 
   const { ref, inView } = useInView();
@@ -16,7 +16,7 @@ export default function Home() {
     try {
       const currentPage = resetPage ? 1 : page;
       const res = await fetch(
-  `https://college-discovery-platform-i9pb.onrender.com/api/colleges?page=${currentPage}&search=${search}&location=${location}`
+  `https://college-discovery-platform-i9pb.onrender.com/api/colleges?page=${currentPage}&search=${search}`
 );
       const newData = await res.json();
 
@@ -39,7 +39,7 @@ export default function Home() {
   setPage(1);
 try {
     const res = await fetch(
-      `https://college-discovery-platform-i9pb.onrender.com/api/colleges?page=1&search=${search}&location=${location}`
+      `https://college-discovery-platform-i9pb.onrender.com/api/colleges?page=1&search=${search}`
     );
     const newData = await res.json();
 
@@ -76,7 +76,6 @@ try {
     <div className="min-h-screen bg-gray-50 p-8 relative pb-24 text-black">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold text-blue-900 mb-8 text-center">Discover Top Colleges</h1>
-
         <div className="bg-white p-4 rounded-lg shadow-md mb-8 flex flex-col sm:flex-row gap-4 border border-gray-200">
           <input 
             type="text" 
@@ -85,16 +84,7 @@ try {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <select 
-            className="border p-2 rounded focus:outline-blue-500 bg-white text-black"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-          >
-            <option value="">All Locations</option>
-            <option value="Shibpur">Shibpur</option>
-            <option value="Bombay">Bombay</option>
-            <option value="Trichy">Trichy</option>
-          </select>
+         
 
           {/* Moved Sort Dropdown Here */}
           <select 
