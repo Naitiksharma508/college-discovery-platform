@@ -7,7 +7,7 @@ export default function CollegeDetail() {
 
   useEffect(() => {
     // Fetch the single college data from your Node.js backend
-    fetch(`http://localhost:5000/api/colleges/${id}`)
+    fetch(`https://college-discovery-platform-i9pb.onrender.com/api/colleges/${id}`)
       .then((res) => res.json())
       .then((data) => setData(data))
       .catch((err) => console.error("Error fetching details:", err));

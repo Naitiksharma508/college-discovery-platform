@@ -14,12 +14,13 @@ export default function Home() {
   const [selectedIds, setSelectedIds] = useState([]);
   const navigate = useNavigate(); 
 
+  
   const { ref, inView } = useInView();
 
   const fetchColleges = async (resetPage = false) => {
     try {
       const currentPage = resetPage ? 1 : page;
-      const res = await fetch(`http://localhost:5000/api/colleges?page=${currentPage}&search=${search}&location=${location}`);
+      const res = await fetch(`https://college-discovery-platform-i9pb.onrender.com/api/colleges?page=${currentPage}&search=${search}&location=${location}`);
       const newData = await res.json();
 
       if (newData.length === 0) {

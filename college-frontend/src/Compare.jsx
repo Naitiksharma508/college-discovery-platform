@@ -7,9 +7,11 @@ export default function Compare() {
   const [colleges, setColleges] = useState([]);
   const [loading, setLoading] = useState(true);
 
+
+  
   useEffect(() => {
     if (ids) {
-      fetch(`http://localhost:5000/api/compare?ids=${ids}`)
+      fetch(`https://college-discovery-platform-i9pb.onrender.com/api/compare?ids=${ids}`)
         .then((res) => res.json())
         .then((data) => {
           setColleges(data);
