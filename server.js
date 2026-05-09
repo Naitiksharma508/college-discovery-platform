@@ -116,6 +116,19 @@ app.get('/api/compare', async (req, res) => {
     res.status(500).json({ error: 'Server Error' });
   }
 });
+app.post('/api/questions', async (req, res) => {
+  try {
+    const { college_id, question_text } = req.body;
+    const result = await pool.query(
+      'INSERT INTO questions (college_id, question_text) VALUES ($1, $2) RETURNING *',
+      [college_id, question_text]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
