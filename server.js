@@ -10,125 +10,274 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Set up the PostgreSQL connection pool
+// PostgreSQL Connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Required for connecting to Neon
+    rejectUnauthorized: false
   }
 });
 
-// Test the database connection
+// Test DB Connection
 pool.connect()
   .then(() => console.log('Successfully connected to Neon PostgreSQL!'))
   .catch(err => console.error('Database connection error', err.stack));
 
-// A simple test route
+// Home Route
 app.get('/', (req, res) => {
   res.send('College Discovery API is running!');
 });
-// Get a list of colleges (with infinite scroll pagination)
-app.get('/api/colleges', async (req, res) => {
-  try {
-    // 1. Figure out which "page" of data the user is on (default is 1)
-    const page = parseInt(req.query.page) || 1;
-    
-    // 2. We will send 10 colleges at a time to keep the website fast
-    const limit = 10; 
-    
-    // 3. Calculate how many items to skip based on the page number
-    const offset = (page - 1) * limit; 
 
-    // 4. Ask the database for the colleges
+
+// ===============================
+// GET ALL COLLEGES
+// ===============================
+app.get('/api/colleges', async (req, res) => {
+
+  try {
+
+    const page = parseInt(req.query.page) || 1;
+
+    const limit = 10;
+
+    const offset = (page - 1) * limit;
+
+    // GET SEARCH + LOCATION
+    const search = req.query.search || "";
+
+    const location = req.query.location || "";
+
+
+
+    // SEARCH QUERY
     const result = await pool.query(
-      'SELECT id, name, location, fees, rating FROM colleges ORDER BY rating DESC LIMIT $1 OFFSET $2',
-      [limit, offset]
+      `
+      SELECT
+        id,
+        name,
+        location,
+        fees,
+        rating
+      FROM colleges
+      WHERE
+        name ILIKE $1
+        AND location ILIKE $2
+      ORDER BY rating DESC
+      LIMIT $3 OFFSET $4
+      `,
+      [
+        `%${search}%`,
+        `%${location}%`,
+        limit,
+        offset
+      ]
     );
 
-    // 5. Send the data back to the frontend
     res.json(result.rows);
-    
+
   } catch (err) {
+
     console.error(err.message);
-    res.status(500).json({ error: 'Server Error' });
+
+    res.status(500).json({
+      error: 'Server Error'
+    });
   }
 });
-// Start the server
-// Get details for a SINGLE college by ID (Includes courses, placements, and Q&A)
+
+
+// ===============================
+// GET SINGLE COLLEGE DETAILS
+// ===============================
 app.get('/api/colleges/:id', async (req, res) => {
   try {
+
     const { id } = req.params;
 
-    // 1. Fetch the main college info
-    const collegeResult = await pool.query('SELECT * FROM colleges WHERE id = $1', [id]);
-    
+    // College Info
+    const collegeResult = await pool.query(
+      'SELECT * FROM colleges WHERE id = $1',
+      [id]
+    );
+
     if (collegeResult.rows.length === 0) {
-      return res.status(404).json({ error: 'College not found' });
+      return res.status(404).json({
+        error: 'College not found'
+      });
     }
 
     const college = collegeResult.rows[0];
 
-    // 2. Fetch the related data from the other tables
-    const coursesResult = await pool.query('SELECT * FROM courses WHERE college_id = $1', [id]);
-    const placementsResult = await pool.query('SELECT * FROM placements WHERE college_id = $1', [id]);
-    const qnaResult = await pool.query('SELECT * FROM qna WHERE college_id = $1', [id]);
+    // Courses
+    const coursesResult = await pool.query(
+      'SELECT * FROM courses WHERE college_id = $1',
+      [id]
+    );
 
-    // 3. Package it all together and send it back
+    // Placements
+    const placementsResult = await pool.query(
+      'SELECT * FROM placements WHERE college_id = $1',
+      [id]
+    );
+
+    // Questions
+    const qnaResult = await pool.query(
+      `
+      SELECT *
+      FROM qna
+      WHERE college_id = $1
+      ORDER BY created_at DESC
+      `,
+      [id]
+    );
+
+    // Add answers to every question
+    const questionsWithAnswers = await Promise.all(
+      qnaResult.rows.map(async (question) => {
+
+        const answersResult = await pool.query(
+          `
+          SELECT *
+          FROM answers
+          WHERE question_id = $1
+          ORDER BY created_at ASC
+          `,
+          [question.id]
+        );
+
+        return {
+          ...question,
+          answers: answersResult.rows
+        };
+
+      })
+    );
+
+    // Final Response
     res.json({
       ...college,
       courses: coursesResult.rows,
       placements: placementsResult.rows,
-      qna: qnaResult.rows
+      qna: questionsWithAnswers
     });
 
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ error: 'Server Error' });
+
+    res.status(500).json({
+      error: 'Server Error'
+    });
   }
 });
-// Get multiple colleges for the Comparison Table
+
+
+// ===============================
+// COMPARE COLLEGES
+// ===============================
 app.get('/api/compare', async (req, res) => {
   try {
-    const idsString = req.query.ids; // e.g., "1,2"
-    
+
+    const idsString = req.query.ids;
+
     if (!idsString) {
-      return res.status(400).json({ error: "No college IDs provided" });
+      return res.status(400).json({
+        error: "No college IDs provided"
+      });
     }
 
-    // Convert the string "1,2" into an array of numbers [1, 2]
-    const idArray = idsString.split(',').map(Number);
+    const idArray = idsString
+      .split(',')
+      .map(Number);
 
-    // Fetch the colleges AND their placement stats in one go
     const query = `
       SELECT 
-        c.id, c.name, c.location, c.fees, c.rating, 
-        p.placement_percentage, p.average_package
+        c.id,
+        c.name,
+        c.location,
+        c.fees,
+        c.rating,
+        p.placement_percentage,
+        p.average_package
       FROM colleges c
-      LEFT JOIN placements p ON c.id = p.college_id
+      LEFT JOIN placements p
+      ON c.id = p.college_id
       WHERE c.id = ANY($1)
     `;
-    
+
     const result = await pool.query(query, [idArray]);
+
     res.json(result.rows);
-    
+
   } catch (err) {
+
     console.error(err.message);
-    res.status(500).json({ error: 'Server Error' });
+
+    res.status(500).json({
+      error: 'Server Error'
+    });
   }
 });
+
+
+// ===============================
+// ADD QUESTION
+// ===============================
 app.post('/api/questions', async (req, res) => {
   try {
-    const { college_id, question_text } = req.body;
+
+    const { college_id, question } = req.body;
+
     const result = await pool.query(
-      'INSERT INTO questions (college_id, question_text) VALUES ($1, $2) RETURNING *',
-      [college_id, question_text]
+      `
+      INSERT INTO qna (college_id, question)
+      VALUES ($1, $2)
+      RETURNING *
+      `,
+      [college_id, question]
     );
+
     res.json(result.rows[0]);
+
   } catch (err) {
+
     console.error(err.message);
+
     res.status(500).send('Server Error');
   }
 });
+
+
+// ===============================
+// ADD ANSWER
+// ===============================
+app.post('/api/answers', async (req, res) => {
+  try {
+
+    const { question_id, answer } = req.body;
+
+    const result = await pool.query(
+      `
+      INSERT INTO answers (question_id, answer)
+      VALUES ($1, $2)
+      RETURNING *
+      `,
+      [question_id, answer]
+    );
+
+    res.json(result.rows[0]);
+
+  } catch (err) {
+
+    console.error(err.message);
+
+    res.status(500).send('Server Error');
+  }
+});
+
+
+// ===============================
+// START SERVER
+// ===============================
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });

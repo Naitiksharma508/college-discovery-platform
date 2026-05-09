@@ -15,7 +15,9 @@ export default function Home() {
   const fetchColleges = async (resetPage = false) => {
     try {
       const currentPage = resetPage ? 1 : page;
-      const res = await fetch(`https://college-discovery-platform-i9pb.onrender.com/api/colleges?page=${currentPage}&search=${search}&location=${location}`);
+      const res = await fetch(
+  `https://college-discovery-platform-i9pb.onrender.com/api/colleges?page=${currentPage}&search=${search}&location=${location}`
+);
       const newData = await res.json();
 
       if (newData.length === 0) {
@@ -29,15 +31,25 @@ export default function Home() {
       console.error("Error fetching colleges:", error);
     }
   };
-
   useEffect(() => { if (page > 1) fetchColleges(false); }, [page]);
   useEffect(() => { fetchColleges(true); }, []);
   useEffect(() => { if (inView && hasMore) setPage((prev) => prev + 1); }, [inView, hasMore]);
+  const handleSearch = async () => {
 
-  const handleSearch = () => {
-    setPage(1);
-    fetchColleges(true);
-  };
+  setPage(1);
+try {
+    const res = await fetch(
+      `https://college-discovery-platform-i9pb.onrender.com/api/colleges?page=1&search=${search}&location=${location}`
+    );
+    const newData = await res.json();
+
+    setColleges(newData);
+
+  } catch (error) {
+
+    console.error("Search error:", error);
+  }
+};
 
   // Sorting Logic
   const handleSort = (criteria) => {
