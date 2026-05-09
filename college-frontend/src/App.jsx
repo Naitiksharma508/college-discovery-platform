@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
-import Home from './Home';
+import Home from './home';
 import CollegeDetail from './CollegeDetail';
 import Compare from './Compare';
 
