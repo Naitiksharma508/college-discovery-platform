@@ -63,13 +63,11 @@ app.get('/api/colleges', async (req, res) => {
       FROM colleges
       WHERE
         name ILIKE $1
-        
       ORDER BY rating DESC
-      LIMIT $3 OFFSET $4
+      LIMIT $2 OFFSET $3
       `,
       [
         `%${search}%`,
-        
         limit,
         offset
       ]
